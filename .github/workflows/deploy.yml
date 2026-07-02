@@ -1,0 +1,26 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            cd /xxm/app/docker-app/finance
+            git pull
+            chmod +x deploy.sh
+            ./deploy.sh --all
