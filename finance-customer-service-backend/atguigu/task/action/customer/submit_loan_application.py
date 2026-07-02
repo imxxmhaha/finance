@@ -85,7 +85,7 @@ class SubmitLoanApplicationAction(Action):
                     is_success=False,
                 )
 
-            # ---- 3. 查询产品详情，获取还款方式 ----
+            # ---- 3. 查询产品详情，校验期限范围 ----
             product_resp = await fetch_loan_product_detail(product_code)
             if product_resp.get("code") != 0:
                 return ActionResult(
@@ -95,6 +95,61 @@ class SubmitLoanApplicationAction(Action):
             product_detail = product_resp.get("data", {}).get("product_detail", {})
             repayment_method = product_detail.get("repayment_method", "equal_principal_interest")
             logger.info(f"贷款申请 产品={product_code}, 还款方式={repayment_method}")
+
+            # 校验申请期限是否在产品期限范围内
+            term_range = product_detail.get("term_range", {})
+            term_min = term_range.get("min")
+            term_max = term_range.get("max")
+
+            # 生成可读的期限描述
+            def format_term(months):
+                if months is None:
+                    return "无限制"
+                if months < 12:
+                    return f"{months}个月"
+                years = months // 12
+                remain_months = months % 12
+                if remain_months == 0:
+                    return f"{years}年"
+                return f"{years}年{remain_months}个月"
+
+            # 生成可选期限示例
+            def generate_term_examples(min_m, max_m):
+                examples = []
+                # 常见期限选项
+                common_terms = [1, 3, 6, 12, 18, 24, 36, 48, 60, 120, 240, 360]
+                for t in common_terms:
+                    if min_m <= t <= max_m:
+                        examples.append(format_term(t))
+                    if len(examples) >= 6:
+                        break
+                return examples
+
+            if term_min is not None and apply_term_months < term_min:
+                examples = generate_term_examples(term_min, term_max or 360)
+                examples_text = "、".join(examples) if examples else f"{format_term(term_min)}~{format_term(term_max)}"
+                return ActionResult(
+                    messages=[BotMessage(
+                        text=f"抱歉，您申请的期限 {format_term(apply_term_months)} 太短了。\n\n"
+                             f"📋 该产品的申请期限范围为：**{format_term(term_min)} ~ {format_term(term_max)}**\n\n"
+                             f"💡 您可以选择：{examples_text}\n\n"
+                             f"请重新输入您期望的贷款期限。"
+                    )],
+                    is_success=False,
+                )
+            if term_max is not None and apply_term_months > term_max:
+                examples = generate_term_examples(term_min or 1, term_max)
+                examples_text = "、".join(examples) if examples else f"{format_term(term_min)}~{format_term(term_max)}"
+                return ActionResult(
+                    messages=[BotMessage(
+                        text=f"抱歉，您申请的期限 {format_term(apply_term_months)} 超出了产品限制。\n\n"
+                             f"📋 该产品的申请期限范围为：**{format_term(term_min)} ~ {format_term(term_max)}**\n\n"
+                             f"💡 您可以选择：{examples_text}\n\n"
+                             f"请重新输入您期望的贷款期限。"
+                    )],
+                    is_success=False,
+                )
+            logger.info(f"贷款申请 期限校验通过: {apply_term_months}个月, 产品范围=[{term_min}, {term_max}]")
 
             # ---- 4. 提交贷款申请 ----
             resp = await submit_loan_application(
