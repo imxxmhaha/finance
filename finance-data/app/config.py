@@ -13,6 +13,13 @@ load_dotenv(ROOT_DIR / ".env")
 
 APP_PORT = int(os.getenv("APP_PORT", "8000"))
 
+# 阿里百炼 API
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
+
+# Milvus
+MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
+MILVUS_PORT = int(os.getenv("MILVUS_PORT", "19530"))
+
 DB_CONFIG = {
     "host": os.environ["DB_HOST"],
     "port": int(os.environ["DB_PORT"]),

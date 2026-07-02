@@ -65,3 +65,20 @@ export async function fetchLoanProducts() {
   const response = await apiFetch('/finance/api/v1/loan/products')
   return response.json()
 }
+
+// 知识库检索
+export async function searchKnowledge(query, topK = 5, sourceType = null) {
+  const body = { query, top_k: topK }
+  if (sourceType) body.source_type = sourceType
+  const response = await apiFetch('/api/knowledge/search', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return response.json()
+}
+
+// 知识库统计
+export async function fetchKnowledgeStats() {
+  const response = await apiFetch('/api/knowledge/stats')
+  return response.json()
+}

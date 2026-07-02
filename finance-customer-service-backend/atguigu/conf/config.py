@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     app_host: str
     app_port: int
 
+    # 阿里百炼 Embedding
+    dashscope_api_key: str = ""
+
+    # Milvus
+    milvus_host: str = "localhost"
+    milvus_port: int = 19530
+
     model_config = SettingsConfigDict(env_file=ENV_FILE)
 
 

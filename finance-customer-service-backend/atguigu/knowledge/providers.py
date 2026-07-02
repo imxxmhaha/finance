@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
+from atguigu.api.logger import logger
 from atguigu.conf.config import settings
 from atguigu.domain.state import DialogueState
 from atguigu.infrastructure.http_client import get_http_client
@@ -70,7 +71,29 @@ class FAQProvider(KnowledgeProvider):
 
 
 class RAGProvider(KnowledgeProvider):
+    """通过 Milvus 向量检索知识库"""
     provider_id = 'rag.default'
 
     async def retrieve(self, state: DialogueState) -> list[KnowledgeChunk]:
-        return [KnowledgeChunk(content="未检索到相关信息")]
+        from atguigu.knowledge.milvus_service import search
+
+        query = ""
+        if state.pending_turn and state.pending_turn.user_message:
+            query = state.pending_turn.user_message.text or ""
+        if not query.strip():
+            return [KnowledgeChunk(content="未提供查询内容")]
+
+        try:
+            results = await search(query=query, top_k=3)
+            if not results:
+                return [KnowledgeChunk(content="未检索到相关知识")]
+
+            chunks = []
+            for r in results:
+                score_pct = f"{r['score'] * 100:.1f}%"
+                chunks.append(KnowledgeChunk(
+                    content=f"[{score_pct}] {r['chunk_text']}"
+                ))
+            return chunks
+        except Exception as e:
+            return [KnowledgeChunk(content=f"知识库检索失败：{e}")]

@@ -13,6 +13,7 @@ dependencies = [
     "tzdata>=2026.2",
     "uvicorn>=0.34.0",
     "matplotlib>=3.11.0",
+    "pymilvus>=2.5.0",
 ]
 
 [dependency-groups]

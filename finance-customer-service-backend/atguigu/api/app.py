@@ -7,6 +7,7 @@ from atguigu.api.lifespan import lifespan
 from atguigu.api.middleware import RequestContextMiddleware
 from atguigu.api.routers.chat_router import chat_router
 from atguigu.api.routers.auth_router import router as auth_router
+from atguigu.api.routers.knowledge_router import router as knowledge_router
 
 
 def create_app() -> FastAPI:
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     # 3. 注册路由
     app.include_router(chat_router)
     app.include_router(auth_router)
+    app.include_router(knowledge_router)
 
     # 4. 注册测试路由
     @app.get("/db-test")

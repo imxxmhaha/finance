@@ -1042,6 +1042,18 @@ async function copyBotText(botMsg) {
             </div>
           </div>
         </div>
+
+        <div class="history-sidebar-footer">
+          <button type="button" class="knowledge-entry-btn" @click="router.push('/knowledge')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              <line x1="8" y1="7" x2="16" y2="7"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+            <span>知识库</span>
+          </button>
+        </div>
       </aside>
 
       <div class="chat-card">
@@ -1377,7 +1389,7 @@ async function copyBotText(botMsg) {
         </div>
 
         <!-- 贷款产品列表 -->
-        <div v-else class="sidebar-list">
+        <div v-else-if="activeTab === 'loans'" class="sidebar-list">
           <div v-if="!loanProducts.length && !isLoadingSidebar" class="sidebar-empty">
             暂无贷款产品数据
           </div>
@@ -1408,6 +1420,7 @@ async function copyBotText(botMsg) {
             </div>
           </article>
         </div>
+
       </aside>
     </div>
   </div>
@@ -1793,6 +1806,32 @@ async function copyBotText(botMsg) {
 .delete-session-btn:hover {
   background: rgba(251, 113, 133, 0.15);
   color: var(--color-danger);
+}
+
+/* 左侧边栏底部 — 知识库入口 */
+.history-sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.knowledge-entry-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+.knowledge-entry-btn:hover {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* 会话详情弹出层 */
@@ -3098,4 +3137,5 @@ async function copyBotText(botMsg) {
     align-items: stretch;
   }
 }
+
 </style>

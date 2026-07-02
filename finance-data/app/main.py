@@ -13,6 +13,7 @@ from .routers.accounts import router as accounts_router
 from .routers.collections import router as collections_router
 from .routers.customers import router as customers_router
 from .routers.foundation import router as foundation_router
+from .routers.knowledge import router as knowledge_router
 from .routers.loans import router as loans_router
 from .routers.operations import router as operations_router
 from .routers.repayments import router as repayments_router
@@ -29,6 +30,7 @@ OPENAPI_TAGS = [
     {"name": "risk", "description": "风控与反洗钱接口"},
     {"name": "collections", "description": "催收接口"},
     {"name": "operations", "description": "运营支撑接口"},
+    {"name": "knowledge", "description": "知识库检索接口"},
 ]
 
 app = FastAPI(title="Finance Data API", version="0.1.0", openapi_tags=OPENAPI_TAGS)
@@ -42,6 +44,7 @@ app.include_router(repayments_router)
 app.include_router(risk_router)
 app.include_router(collections_router)
 app.include_router(operations_router)
+app.include_router(knowledge_router)
 
 
 @app.exception_handler(AppError)
