@@ -235,8 +235,13 @@ def get_account(
         """,
         (account["account_product_id"],),
     )
+    customer = fetch_one(
+        "SELECT customer_no FROM customer WHERE id = %s",
+        (account["customer_id"],),
+    )
     return ok(
         {
+            "customer_no": customer["customer_no"] if customer else None,
             "account_status": account["account_status"],
             "balance_amount": str(account["balance_amount"]),
             "frozen_amount": str(account["frozen_amount"]),

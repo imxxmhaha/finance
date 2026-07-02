@@ -97,6 +97,21 @@ async def fetch_customer(customer_no: str) -> Dict[str, Any]:
     return response.json()
 
 
+async def fetch_customer_no_by_account(account_no: str) -> Optional[str]:
+    """
+    通过账户号反查客户号
+    调用 GET /api/v1/accounts/{account_no} 获取 customer_no
+    """
+    client = get_http_client()
+    uri = f'{settings.finance_api_base_url}/api/v1/accounts/{account_no}'
+    response = await client.get(uri)
+    account_resp = response.json()
+    logger.info(f"invoke {uri} resp: {account_resp}")
+    if account_resp.get("code") != 0:
+        return None
+    return account_resp.get("data", {}).get("customer_no")
+
+
 async def fetch_customer_accounts(
     customer_no: str,
     account_status: Optional[str] = None
@@ -190,6 +205,30 @@ async def fetch_loan_products(
         params=params
     )
     logger.info(f"invoke {products_uri} resp: {response.json()}")
+    return response.json()
+
+
+async def fetch_credit_limits(customer_no: str) -> Dict[str, Any]:
+    """
+    查询客户授信额度列表
+    对应接口: GET /api/v1/customers/{customer_no}/credit-limits
+    """
+    client = get_http_client()
+    uri = f'{settings.finance_api_base_url}/api/v1/customers/{customer_no}/credit-limits'
+    response = await client.get(uri)
+    logger.info(f"invoke {uri} resp: {response.json()}")
+    return response.json()
+
+
+async def fetch_loan_product_detail(product_code: str) -> Dict[str, Any]:
+    """
+    查询贷款产品详情（含还款方式等）
+    对应接口: GET /api/v1/loan/products/{product_code}
+    """
+    client = get_http_client()
+    uri = f'{settings.finance_api_base_url}/api/v1/loan/products/{product_code}'
+    response = await client.get(uri)
+    logger.info(f"invoke {uri} resp: {response.json()}")
     return response.json()
 
 
