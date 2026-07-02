@@ -73,6 +73,7 @@ services:
       API_OPERATOR_NO: "EMP000006"
       MILVUS_HOST: "standalone"
       MILVUS_PORT: "19530"
+      DASHSCOPE_API_KEY: "${DASHSCOPE_API_KEY:-sk-5a0a81401f0740ca963115bfca78c0cf}"
     depends_on:
       - finance-data
       - standalone
