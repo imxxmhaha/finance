@@ -21,6 +21,7 @@ class SessionInfo(BaseModel):
     last_activity_at: Optional[float] = None
     message_count: int = 0
     last_message: str = ""
+    title: str = "新对话"
 
 
 class SessionListResponse(BaseModel):
@@ -49,32 +50,28 @@ async def chat_history_endpoint(sender_id: str,
 async def chat_sessions_endpoint(sender_id: str,
                                  service: DialogueService = Depends(get_dialogue_service)
                                  ) -> SessionListResponse:
-    """获取会话列表"""
-    state = await service.load_state(sender_id)
+    """获取会话列表（从 dialogue_sessions 表加载，包含标题）"""
+    from atguigu.models.dialogue_session import DialogueSessionRecord
+    from sqlalchemy import select
+
+    sql = (
+        select(DialogueSessionRecord)
+        .where(DialogueSessionRecord.sender_id == sender_id)
+        .order_by(DialogueSessionRecord.started_at.desc())
+    )
+    result = await service.dialogue_state_repository.session.execute(sql)
+    session_records = result.scalars().all()
+
     sessions = []
-
-    if state and state.sessions:
-        for session in reversed(state.sessions):
-            # 计算消息数量和最后一条消息
-            message_count = 0
-            last_message = ""
-            for turn in session.turns:
-                if turn.user_message:
-                    message_count += 1
-                    last_message = turn.user_message.text or ""
-                message_count += len(turn.bot_messages)
-                if turn.bot_messages:
-                    last_msg = turn.bot_messages[-1]
-                    if last_msg.text:
-                        last_message = last_msg.text
-
-            sessions.append(SessionInfo(
-                session_id=session.session_id,
-                started_at=session.started_at,
-                last_activity_at=session.last_activity_at,
-                message_count=message_count,
-                last_message=last_message[:100] if last_message else "",
-            ))
+    for record in session_records:
+        sessions.append(SessionInfo(
+            session_id=record.session_id,
+            started_at=record.started_at.timestamp() if record.started_at else None,
+            last_activity_at=record.last_activity_at.timestamp() if record.last_activity_at else None,
+            message_count=record.message_count or 0,
+            last_message=record.last_message or "",
+            title=record.title or "新对话",
+        ))
 
     return SessionListResponse(sender_id=sender_id, sessions=sessions)
 
@@ -106,61 +103,6 @@ def _build_chat_response(process_result: ProcessResult) -> ChatResponse:
                               ) if message.object else None
         ) for message in process_result.messages]
     )
-
-
-class SummaryRequest(BaseModel):
-    messages: List[dict]
-
-
-class SummaryResponse(BaseModel):
-    title: str
-
-
-@chat_router.post("/api/chat/summary", response_model=SummaryResponse)
-async def chat_summary_endpoint(request: SummaryRequest) -> SummaryResponse:
-    """生成对话概要标题"""
-    if not request.messages:
-        return SummaryResponse(title="新对话")
-
-    # 提取消息文本
-    msg_texts = []
-    for msg in request.messages[:10]:  # 只取前10条消息
-        role = "用户" if msg.get("role") == "user" else "客服"
-        text = msg.get("text", "")
-        if text:
-            msg_texts.append(f"{role}：{text}")
-
-    if not msg_texts:
-        return SummaryResponse(title="新对话")
-
-    conversation = "\n".join(msg_texts)
-
-    try:
-        # 使用 LLM 生成概要标题
-        prompt = f"""请根据以下对话内容，生成一个简短的标题（不超过15个字）。
-
-要求：
-- 只返回标题，不要其他内容
-- 标题要概括对话的主要内容
-- 如果是金融相关，可以包含关键词如：账户、理财、贷款、转账等
-
-对话内容：
-{conversation}
-
-标题："""
-
-        from langchain_core.messages import HumanMessage
-        response = await llm.ainvoke([HumanMessage(content=prompt)])
-        title = response.content.strip()
-
-        # 限制标题长度
-        if len(title) > 20:
-            title = title[:17] + "..."
-
-        return SummaryResponse(title=title or "新对话")
-    except Exception as e:
-        # 如果 LLM 调用失败，返回默认标题
-        return SummaryResponse(title="新对话")
 
 
 class NewSessionRequest(BaseModel):
@@ -204,3 +146,40 @@ async def new_session_endpoint(
             session_id="",
             message=f"创建会话失败: {str(e)}"
         )
+
+
+class UpdateTitleRequest(BaseModel):
+    sender_id: str
+    session_id: str
+    title: str
+
+
+class UpdateTitleResponse(BaseModel):
+    success: bool
+    message: str
+
+
+@chat_router.post("/api/chat/session/title", response_model=UpdateTitleResponse)
+async def update_session_title_endpoint(
+    request: UpdateTitleRequest,
+    service: DialogueService = Depends(get_dialogue_service)
+) -> UpdateTitleResponse:
+    """更新会话标题"""
+    try:
+        from atguigu.models.dialogue_session import DialogueSessionRecord
+        from sqlalchemy import update
+
+        stmt = (
+            update(DialogueSessionRecord)
+            .where(
+                DialogueSessionRecord.sender_id == request.sender_id,
+                DialogueSessionRecord.session_id == request.session_id,
+            )
+            .values(title=request.title)
+        )
+        await service.dialogue_state_repository.session.execute(stmt)
+        await service.dialogue_state_repository.session.commit()
+
+        return UpdateTitleResponse(success=True, message="标题已更新")
+    except Exception as e:
+        return UpdateTitleResponse(success=False, message=f"更新失败: {str(e)}")

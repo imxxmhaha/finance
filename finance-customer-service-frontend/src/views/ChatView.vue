@@ -327,18 +327,46 @@ watch(
   }
 )
 
+// 从消息列表生成标题
+function generateTitle(msgs) {
+  const firstUserMsg = msgs.find(m => m.role === 'user' && m.text)
+  if (firstUserMsg) {
+    const text = firstUserMsg.text
+    return text.length > 15 ? text.substring(0, 15) + '...' : text
+  }
+  return '新对话'
+}
+
+// 保存会话标题到后端
+async function saveSessionTitle(sessionId, title) {
+  try {
+    await fetch('/api/chat/session/title', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender_id: senderId.value.trim(),
+        session_id: sessionId,
+        title: title,
+      }),
+    })
+  } catch (error) {
+    console.error('保存标题失败:', error)
+  }
+}
+
 // 新对话
 async function resetConversation() {
   const currentSenderId = senderId.value.trim()
   if (!currentSenderId) return
 
-  // 为当前对话生成概要标题（如果有消息）
+  // 为当前对话生成标题并保存
   if (messages.value.length > 0 && currentSessionId.value) {
+    const title = generateTitle(messages.value)
     const session = sessions.value.find(s => s.session_id === currentSessionId.value)
-    if (session && session.title === '新对话') {
-      const title = await generateSummary(messages.value)
+    if (session) {
       session.title = title
     }
+    await saveSessionTitle(currentSessionId.value, title)
   }
 
   let newSessionId = 'local_' + Date.now()
@@ -550,42 +578,38 @@ async function loadSessions() {
   selectedSession.value = null
 
   try {
-    const response = await fetch(`/api/chat/history?sender_id=${encodeURIComponent(currentSenderId)}`)
-    const data = await response.json()
+    // 并行加载会话列表（含标题）和消息列表
+    const [sessionsRes, messagesRes] = await Promise.all([
+      fetch(`/api/chat/history/sessions?sender_id=${encodeURIComponent(currentSenderId)}`),
+      fetch(`/api/chat/history?sender_id=${encodeURIComponent(currentSenderId)}`),
+    ])
 
-    if (!response.ok) {
-      throw new Error(data.detail || '加载历史对话失败')
+    const sessionsData = await sessionsRes.json()
+    const messagesData = await messagesRes.json()
+
+    if (!sessionsRes.ok) {
+      throw new Error(sessionsData.detail || '加载会话列表失败')
     }
 
-    const messages = data.messages || []
-
-    // 按 session_id 分组
-    const sessionMap = new Map()
+    // 按 session_id 分组消息
+    const messages = messagesData.messages || []
+    const messageMap = new Map()
     for (const msg of messages) {
       const sid = msg.session_id || 'default'
-      if (!sessionMap.has(sid)) {
-        sessionMap.set(sid, {
-          session_id: sid,
-          messages: [],
-          last_message: '',
-          title: '新对话',
-        })
+      if (!messageMap.has(sid)) {
+        messageMap.set(sid, [])
       }
-      const session = sessionMap.get(sid)
-      session.messages.push(msg)
-      if (msg.text) {
-        session.last_message = msg.text.length > 50 ? msg.text.substring(0, 50) + '...' : msg.text
-      }
+      messageMap.get(sid).push(msg)
     }
 
-    // 为每个会话生成标题
-    const sessionsList = Array.from(sessionMap.values()).reverse()
-    for (const session of sessionsList) {
-      if (session.messages.length > 0) {
-        const title = await generateSummary(session.messages)
-        session.title = title
-      }
-    }
+    // 合并会话信息和消息
+    const sessionsList = (sessionsData.sessions || []).map(sessionInfo => ({
+      session_id: sessionInfo.session_id,
+      title: sessionInfo.title || '新对话',
+      last_message: sessionInfo.last_message || '',
+      message_count: sessionInfo.message_count || 0,
+      messages: messageMap.get(sessionInfo.session_id) || [],
+    }))
 
     sessions.value = sessionsList
   } catch (error) {
@@ -691,23 +715,6 @@ function updateCurrentSession(lastMessage) {
     session.last_message = lastMessage
       ? (lastMessage.length > 30 ? lastMessage.substring(0, 30) + '...' : lastMessage)
       : session.last_message
-  }
-}
-
-// 生成对话概要标题
-async function generateSummary(msgs) {
-  try {
-    const response = await fetch('/api/chat/summary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: msgs.map(m => ({ role: m.role, text: m.text || '' }))
-      }),
-    })
-    const data = await response.json()
-    return data.title || '对话'
-  } catch {
-    return '对话'
   }
 }
 

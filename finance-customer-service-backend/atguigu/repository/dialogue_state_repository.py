@@ -91,17 +91,25 @@ class DialogueStateRepository:
                 ensure_ascii=False,
             )
 
-            # 计算消息数和最后一条消息
+            # 计算消息数、最后一条消息、生成标题
             message_count = 0
             last_message = ""
+            first_user_text = ""
             for turn in session_obj.turns:
                 if turn.user_message and turn.user_message.text:
                     message_count += 1
                     last_message = turn.user_message.text
+                    if not first_user_text:
+                        first_user_text = turn.user_message.text
                 for bot_msg in turn.bot_messages:
                     message_count += 1
                     if bot_msg.text:
                         last_message = bot_msg.text
+
+            # 从第一条用户消息生成标题
+            title = first_user_text[:15] + "..." if len(first_user_text) > 15 else first_user_text
+            if not title:
+                title = "新对话"
 
             session_insert = insert(DialogueSessionRecord).values(
                 sender_id=state.sender_id,
@@ -110,6 +118,7 @@ class DialogueStateRepository:
                 last_activity_at=_timestamp_to_datetime(session_obj.last_activity_at),
                 closed_at=_timestamp_to_datetime(session_obj.closed_at) if session_obj.closed_at else None,
                 turns_json=turns_json,
+                title=title,
                 message_count=message_count,
                 last_message=last_message[:500] if last_message else None,
             )
@@ -117,6 +126,7 @@ class DialogueStateRepository:
                 last_activity_at=session_insert.inserted.last_activity_at,
                 closed_at=session_insert.inserted.closed_at,
                 turns_json=session_insert.inserted.turns_json,
+                title=session_insert.inserted.title,
                 message_count=session_insert.inserted.message_count,
                 last_message=session_insert.inserted.last_message,
             )
