@@ -32,6 +32,9 @@ class FlowExecutor:
     流程执行器
     """
 
+    def __init__(self):
+        self._last_action_step_id: str | None = None
+
     async def run_task(self, state: DialogueState, flows: FlowsList, action_runner: ActionRunner) -> List[BotMessage]:
         messages: List[BotMessage] = []
         while True:
@@ -43,14 +46,12 @@ class FlowExecutor:
                 state.set_slots(action_result.slot_updates)
                 messages.extend(action_result.messages)
                 if not action_result.is_success:
-                    # 流程失败时清空槽位，确保用户重新开启流程时需要重新填写信息
-                    state.active_task.slots.clear()
+                    # 流程失败时：回退 step_id 到失败的 action 步骤，清空该 action 设置的槽位
+                    if self._last_action_step_id is not None:
+                        state.active_task.step_id = self._last_action_step_id
+                    for key in action_result.slot_updates:
+                        state.active_task.slots.pop(key, None)
                     break
-                # action 成功后才推进步骤
-                current_task = state.current_active_task()
-                flow = flows.get_flow_by_id(current_task.flow_id)
-                step = flow.get_step_by_id(current_task.step_id)
-                self._advance_to_next_step(step, state)
         return messages
 
     def advance_until_action(self, state: DialogueState, flows: FlowsList) -> ActionCall:
@@ -85,7 +86,9 @@ class FlowExecutor:
             return self._run_action_step(step, state)
 
     def _run_action_step(self, step, state) -> ActionCall | None:
-        # 不在此处推进步骤，由外层 run_task 在 action 成功后再推进
+        # 保存当前步骤ID，失败时用于回退
+        self._last_action_step_id = step.id
+        self._advance_to_next_step(step, state)
         action_call: ActionCall = self._build_action_call(step, state)
         return action_call
 
