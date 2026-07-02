@@ -43,6 +43,8 @@ class FlowExecutor:
                 state.set_slots(action_result.slot_updates)
                 messages.extend(action_result.messages)
                 if not action_result.is_success:
+                    # 流程失败时清空槽位，确保用户重新开启流程时需要重新填写信息
+                    state.active_task.slots.clear()
                     break
         return messages
 
