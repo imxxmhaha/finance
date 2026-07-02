@@ -71,8 +71,11 @@ services:
       DATABASE_URL: "mysql+aiomysql://root:root@mysql:3306/finance-bot-service?charset=utf8mb4"
       API_CHANNEL_CODE: "OPEN_API"
       API_OPERATOR_NO: "EMP000006"
+      MILVUS_HOST: "standalone"
+      MILVUS_PORT: "19530"
     depends_on:
       - finance-data
+      - standalone
 
   # ============================================================
   # 前端 (finance-customer-service-frontend)
