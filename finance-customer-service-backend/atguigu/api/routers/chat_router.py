@@ -183,3 +183,75 @@ async def update_session_title_endpoint(
         return UpdateTitleResponse(success=True, message="标题已更新")
     except Exception as e:
         return UpdateTitleResponse(success=False, message=f"更新失败: {str(e)}")
+
+
+class ClearHistoryRequest(BaseModel):
+    sender_id: str
+
+
+class ClearHistoryResponse(BaseModel):
+    success: bool
+    message: str
+
+
+@chat_router.post("/api/chat/history/clear", response_model=ClearHistoryResponse)
+async def clear_history_endpoint(
+    request: ClearHistoryRequest,
+    service: DialogueService = Depends(get_dialogue_service)
+) -> ClearHistoryResponse:
+    """清除用户所有历史记录"""
+    try:
+        from atguigu.models.dialogue_session import DialogueSessionRecord
+        from atguigu.models.dialogue_state import DialogueStateRecord
+        from sqlalchemy import delete
+
+        # 删除所有会话记录
+        session_stmt = delete(DialogueSessionRecord).where(
+            DialogueSessionRecord.sender_id == request.sender_id
+        )
+        await service.dialogue_state_repository.session.execute(session_stmt)
+
+        # 删除对话状态记录
+        state_stmt = delete(DialogueStateRecord).where(
+            DialogueStateRecord.sender_id == request.sender_id
+        )
+        await service.dialogue_state_repository.session.execute(state_stmt)
+
+        await service.dialogue_state_repository.session.commit()
+
+        return ClearHistoryResponse(success=True, message="历史记录已清除")
+    except Exception as e:
+        return ClearHistoryResponse(success=False, message=f"清除失败: {str(e)}")
+
+
+class DeleteSessionRequest(BaseModel):
+    sender_id: str
+    session_id: str
+
+
+class DeleteSessionResponse(BaseModel):
+    success: bool
+    message: str
+
+
+@chat_router.post("/api/chat/session/delete", response_model=DeleteSessionResponse)
+async def delete_session_endpoint(
+    request: DeleteSessionRequest,
+    service: DialogueService = Depends(get_dialogue_service)
+) -> DeleteSessionResponse:
+    """删除单条会话记录"""
+    try:
+        from atguigu.models.dialogue_session import DialogueSessionRecord
+        from sqlalchemy import delete
+
+        # 删除指定会话记录
+        stmt = delete(DialogueSessionRecord).where(
+            DialogueSessionRecord.sender_id == request.sender_id,
+            DialogueSessionRecord.session_id == request.session_id,
+        )
+        await service.dialogue_state_repository.session.execute(stmt)
+        await service.dialogue_state_repository.session.commit()
+
+        return DeleteSessionResponse(success=True, message="会话已删除")
+    except Exception as e:
+        return DeleteSessionResponse(success=False, message=f"删除失败: {str(e)}")

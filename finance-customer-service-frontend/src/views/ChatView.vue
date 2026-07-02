@@ -406,6 +406,71 @@ async function resetConversation() {
   selectedSession.value = null
 }
 
+// 清除历史记录
+async function clearHistory() {
+  const currentSenderId = senderId.value.trim()
+  if (!currentSenderId) return
+
+  if (!confirm('确定要清除所有历史对话吗？此操作不可恢复。')) {
+    return
+  }
+
+  try {
+    const response = await fetch('/api/chat/history/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender_id: currentSenderId }),
+    })
+
+    if (response.ok) {
+      // 清空本地状态
+      sessions.value = []
+      messages.value = []
+      currentSessionId.value = ''
+      selectedSession.value = null
+
+      // 创建一个新会话
+      await resetConversation()
+    }
+  } catch (error) {
+    console.error('清除历史记录失败:', error)
+  }
+}
+
+// 删除单条会话
+async function deleteSession(session) {
+  const currentSenderId = senderId.value.trim()
+  if (!currentSenderId) return
+
+  if (!confirm(`确定要删除对话"${session.title}"吗？`)) {
+    return
+  }
+
+  try {
+    const response = await fetch('/api/chat/session/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender_id: currentSenderId,
+        session_id: session.session_id,
+      }),
+    })
+
+    if (response.ok) {
+      // 从列表中移除
+      sessions.value = sessions.value.filter(s => s.session_id !== session.session_id)
+
+      // 如果删除的是当前会话，清空聊天区域
+      if (currentSessionId.value === session.session_id) {
+        messages.value = []
+        currentSessionId.value = ''
+      }
+    }
+  } catch (error) {
+    console.error('删除会话失败:', error)
+  }
+}
+
 function formatAmount(amount) {
   const numericAmount = Number(amount)
   if (Number.isNaN(numericAmount)) {
@@ -924,9 +989,14 @@ async function copyBotText(botMsg) {
       <aside class="history-sidebar">
         <div class="history-sidebar-header">
           <h2>💬 历史对话</h2>
-          <button type="button" class="new-chat-btn" title="新对话" @click="resetConversation">
-            +
-          </button>
+          <div class="history-header-actions">
+            <button type="button" class="new-chat-btn" title="新对话" @click="resetConversation">
+              +
+            </button>
+            <button type="button" class="clear-history-btn" title="清除历史记录" @click="clearHistory">
+              🗑️
+            </button>
+          </div>
         </div>
 
         <div class="history-sidebar-content">
@@ -958,7 +1028,17 @@ async function copyBotText(botMsg) {
                 <div class="history-item-title">{{ session.title || '对话 #' + (sessions.length - index) }}</div>
                 <div class="history-item-preview">{{ session.last_message || '空对话' }}</div>
               </div>
-              <div class="history-item-count">{{ session.messages.length }}</div>
+              <div class="history-item-right">
+                <div class="history-item-count">{{ session.messages.length }}</div>
+                <button
+                  type="button"
+                  class="delete-session-btn"
+                  title="删除此对话"
+                  @click.stop="deleteSession(session)"
+                >
+                  ×
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -981,14 +1061,20 @@ async function copyBotText(botMsg) {
               </div>
             </div>
             <div class="header-actions">
-              <button type="button" class="clear-button" title="清空对话" @click="resetConversation">
-                <span>🔄</span>
-                <span>新对话</span>
-              </button>
-              <button type="button" class="logout-button" title="退出登录" @click="authStore.logout(); router.push('/login')">
-                <span>🚪</span>
-                <span>{{ authStore.customerName || authStore.customerNo }}</span>
-              </button>
+              <div class="user-menu">
+                <div class="user-avatar-small">
+                  {{ (authStore.customerName || authStore.customerNo || 'U').charAt(0) }}
+                </div>
+                <span class="user-name">{{ authStore.customerName || authStore.customerNo }}</span>
+                <button type="button" class="action-btn logout-btn" title="退出登录" @click="authStore.logout(); router.push('/login')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  <span>退出</span>
+                </button>
+              </div>
             </div>
           </div>
         </header>
@@ -1564,6 +1650,33 @@ async function copyBotText(botMsg) {
   transform: scale(1.05);
 }
 
+.history-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.clear-history-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-base) var(--ease-out-expo);
+}
+
+.clear-history-btn:hover {
+  background: rgba(251, 113, 133, 0.1);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  transform: scale(1.05);
+}
+
 .history-sidebar-content {
   flex: 1;
   overflow-y: auto;
@@ -1648,6 +1761,38 @@ async function copyBotText(botMsg) {
   background: var(--color-surface-raised);
   padding: 2px 8px;
   border-radius: 10px;
+}
+
+.history-item-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.delete-session-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.history-item:hover .delete-session-btn {
+  opacity: 1;
+}
+
+.delete-session-btn:hover {
+  background: rgba(251, 113, 133, 0.15);
+  color: var(--color-danger);
 }
 
 /* 会话详情弹出层 */
@@ -1884,16 +2029,16 @@ async function copyBotText(botMsg) {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.nav-button, .logout-button {
+.action-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 8px 14px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--color-surface-raised);
   color: var(--color-text-secondary);
   font-size: 13px;
@@ -1903,15 +2048,67 @@ async function copyBotText(botMsg) {
   white-space: nowrap;
 }
 
-.nav-button:hover {
+.action-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.new-chat-btn {
   background: var(--color-accent-soft);
-  border-color: var(--color-accent);
+  border-color: rgba(59, 130, 246, 0.2);
   color: var(--color-accent);
 }
 
-.logout-button:hover {
+.new-chat-btn:hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px var(--color-accent-glow);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 8px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.user-avatar-small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent), #6366f1);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.logout-btn:hover {
   background: rgba(251, 113, 133, 0.1);
-  border-color: var(--color-danger);
   color: var(--color-danger);
 }
 
@@ -1929,26 +2126,7 @@ async function copyBotText(botMsg) {
 }
 
 .clear-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--duration-base) var(--ease-out-expo);
-  white-space: nowrap;
-}
-.clear-button:hover {
-  background: rgba(251, 113, 133, 0.10);
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 18px var(--color-danger-soft);
+  display: none;
 }
 
 .controls {
