@@ -172,6 +172,5 @@ services:
     depends_on: # 依赖控制
       - standalone    # 必须等 Milvus (standalone) 启动完毕后，UI 界面才跟着启动
 
-
 volumes:
   mysql_data:
