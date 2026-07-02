@@ -151,6 +151,41 @@ class SubmitLoanApplicationAction(Action):
                 )
             logger.info(f"贷款申请 期限校验通过: {apply_term_months}个月, 产品范围=[{term_min}, {term_max}]")
 
+            # 校验申请金额是否在产品金额范围内
+            amount_range = product_detail.get("amount_range", {})
+            amount_min = amount_range.get("min")
+            amount_max = amount_range.get("max")
+
+            # 生成可读的金额描述
+            def format_amount(amount):
+                if amount is None:
+                    return "无限制"
+                if amount >= 100000000:  # 1亿
+                    return f"{amount / 100000000:.1f}亿"
+                if amount >= 10000:
+                    return f"{amount / 10000:.0f}万"
+                return f"{amount:,.0f}元"
+
+            if amount_min is not None and parsed_amount < amount_min:
+                return ActionResult(
+                    messages=[BotMessage(
+                        text=f"抱歉，您申请的金额 {format_amount(parsed_amount)} 低于产品最低要求。\n\n"
+                             f"📋 该产品的申请金额范围为：**{format_amount(amount_min)} ~ {format_amount(amount_max)}**\n\n"
+                             f"请重新输入您期望的贷款金额。"
+                    )],
+                    is_success=False,
+                )
+            if amount_max is not None and parsed_amount > amount_max:
+                return ActionResult(
+                    messages=[BotMessage(
+                        text=f"抱歉，您申请的金额 {format_amount(parsed_amount)} 超出了产品限制。\n\n"
+                             f"📋 该产品的申请金额范围为：**{format_amount(amount_min)} ~ {format_amount(amount_max)}**\n\n"
+                             f"请重新输入您期望的贷款金额。"
+                    )],
+                    is_success=False,
+                )
+            logger.info(f"贷款申请 金额校验通过: {parsed_amount}元, 产品范围=[{amount_min}, {amount_max}]")
+
             # ---- 4. 提交贷款申请 ----
             resp = await submit_loan_application(
                 customer_no=customer_no,
