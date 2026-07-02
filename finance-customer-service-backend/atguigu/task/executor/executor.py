@@ -137,31 +137,36 @@ class FlowExecutor:
 
     def _render_string(self, text: str, context: dict) -> Any:
         """解析字符串中的 Jinja2 模板"""
-        original = text
+        # 如果包含 Jinja2 语法，直接渲染
+        if '{{' in text or '{%' in text:
+            try:
+                template = Template(text)
+                rendered = template.render(context).strip()
+                return rendered if rendered else text
+            except Exception:
+                return text
 
-        # 如果不包含 Jinja2 语法，自动补全 {{ }}
-        if '{{' not in text and '{%' not in text:
-            text = f"{{{{ {text} }}}}"
-
-        try:
-            template = Template(text)
-            rendered = template.render(context).strip()
-
-            if not rendered:
-                if '.' in original and not any(op in original for op in ['{{', '{%', ' ']):
-                    return {}
-                return rendered
-
-            if rendered.startswith('{') or rendered.startswith('['):
-                import ast
+        # 如果看起来像变量引用（如 context.response, slots.loan_amount），尝试解析
+        stripped = text.strip()
+        if stripped and '.' in stripped and ' ' not in stripped:
+            # 只包含字母、数字、下划线、点号
+            if all(c.isalnum() or c in '._' for c in stripped):
                 try:
-                    return ast.literal_eval(rendered)
-                except (ValueError, SyntaxError):
-                    return rendered
+                    template = Template(f"{{{{ {stripped} }}}}")
+                    rendered = template.render(context).strip()
+                    if rendered:
+                        if rendered.startswith('{') or rendered.startswith('['):
+                            import ast
+                            try:
+                                return ast.literal_eval(rendered)
+                            except (ValueError, SyntaxError):
+                                return rendered
+                        return rendered
+                except Exception:
+                    pass
 
-            return rendered
-        except Exception:
-            return {}
+        # 普通文本，直接返回
+        return text
 
     def _run_start_step(self, step, state) -> ActionCall | None:
         self._advance_to_next_step(step, state)

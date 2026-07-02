@@ -35,3 +35,11 @@ class DialogueService:
                 chat_messages.extend(bot_msg)
 
         return chat_messages
+
+    async def load_state(self, sender_id: str) -> DialogueState:
+        """加载对话状态（供会话列表接口使用）"""
+        return await self.dialogue_state_repository.load_state(sender_id)
+
+    async def save_state(self, state: DialogueState) -> None:
+        """保存对话状态"""
+        await self.dialogue_state_repository.save_state(state)

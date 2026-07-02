@@ -64,7 +64,7 @@ services:
     environment:
       APP_HOST: "0.0.0.0"
       APP_PORT: "7000"
-      LLM_MODEL: "qwen-plus"
+      LLM_MODEL: "qwen-plus-2025-07-28"
       LLM_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
       LLM_API_KEY: "${LLM_API_KEY:-sk-5a0a81401f0740ca963115bfca78c0cf}"
       FINANCE_API_BASE_URL: "http://finance-data:8000"

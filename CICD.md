@@ -226,8 +226,13 @@ git push origin master
 ### 5.3 验证部署
 
 1. 打开浏览器，进入 GitHub 仓库页面
+
 2. 点击 **Actions** 标签
+
 3. 应该能看到一个正在运行或已完成的 workflow
+
+   https://github.com/imxxmhaha/finance/actions
+
 4. 点击进入查看详细日志
 
 ---
