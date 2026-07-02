@@ -1,0 +1,321 @@
+slots:
+  account_number:
+    type: text
+    label: 账户号
+    description: 用户的银行账户号
+
+  account_balance:
+    type: text
+    label: 账户余额
+    description: 账户当前余额
+
+  account_type:
+    type: text
+    label: 账户类型
+    description: 账户类型（储蓄账户/信用卡账户等）
+
+  card_number:
+    type: text
+    label: 银行卡号
+    description: 用户的银行卡号
+
+  card_type:
+    type: text
+    label: 银行卡类型
+    description: 银行卡类型（借记卡/信用卡）
+
+  transaction_list:
+    type: text
+    label: 交易记录
+    description: 账户的交易记录列表
+
+  transaction_period:
+    type: text
+    label: 查询时间段
+    description: 交易记录查询的时间段
+
+  loan_amount:
+    type: text
+    label: 贷款金额
+    description: 申请贷款的金额
+
+  loan_purpose:
+    type: text
+    label: 贷款用途
+    description: 贷款的用途
+
+  loan_term:
+    type: text
+    label: 贷款期限
+    description: 贷款的期限
+
+  loan_status:
+    type: text
+    label: 贷款申请状态
+    description: 贷款申请的当前状态
+
+  loss_reason:
+    type: text
+    label: 挂失原因
+    description: 银行卡挂失的原因
+
+  loss_status:
+    type: text
+    label: 挂失状态
+    description: 挂失处理的当前状态
+
+  complaint_type:
+    type: text
+    label: 投诉类型
+    description: 投诉的类型
+
+  complaint_content:
+    type: text
+    label: 投诉内容
+    description: 投诉的具体内容
+
+  ticket_id:
+    type: text
+    label: 工单号
+    description: 投诉工单号
+
+  ticket_status:
+    type: text
+    label: 工单状态
+    description: 投诉工单的处理状态
+
+flows:
+  onboarding:
+    name: 欢迎引导
+    description: 在聊天窗口初次打开时欢迎用户，并介绍助手可处理的金融服务。这个 flow 通常由系统主动触发。
+    steps:
+      - id: start
+        type: start
+        next: respond
+
+      - id: respond
+        type: action
+        action: action_response
+        args:
+          text: "您好，欢迎使用智能金融客服。我可以帮您查询账户余额、查看交易记录、申请贷款、办理银行卡挂失，或者提交投诉建议。请问有什么可以帮到您的？"
+        next: end
+
+      - id: end
+        type: end
+        next: []
+
+  account_balance_query:
+    name: 账户余额查询
+    description: 帮用户查询银行账户的当前余额信息。
+    steps:
+      - id: start
+        type: start
+        next: ask_account_number
+
+      - id: ask_account_number
+        type: collect
+        slot_name: account_number
+        response:
+          text: "请提供您的账户号，我来帮您查询余额。"
+        next: lookup_account_balance
+
+      - id: lookup_account_balance
+        type: action
+        action: action_lookup_account_balance
+        next: show_balance
+
+      - id: show_balance
+        type: action
+        action: action_response
+        args:
+          text: "您的账户{{ slots.account_number }}（{{ slots.account_type }}）当前余额为：{{ slots.account_balance }}元。"
+        next: end
+
+      - id: end
+        type: end
+        next: []
+
+  transaction_query:
+    name: 交易记录查询
+    description: 帮用户查询银行账户的交易记录。
+    steps:
+      - id: start
+        type: start
+        next: ask_account_number
+
+      - id: ask_account_number
+        type: collect
+        slot_name: account_number
+        response:
+          text: "请提供您的账户号，我来帮您查询交易记录。"
+        next: ask_period
+
+      - id: ask_period
+        type: collect
+        slot_name: transaction_period
+        response:
+          text: "请问您想查询哪个时间段的交易记录？（如：最近一周、最近一个月、最近三个月）"
+        next: lookup_transactions
+
+      - id: lookup_transactions
+        type: action
+        action: action_lookup_transactions
+        next: show_transactions
+
+      - id: show_transactions
+        type: action
+        action: action_response
+        args:
+          text: "以下是您账户{{ slots.account_number }}{{ slots.transaction_period }}的交易记录：\n{{ slots.transaction_list }}"
+        next: end
+
+      - id: end
+        type: end
+        next: []
+
+  loan_application:
+    name: 贷款申请
+    description: 帮用户提交贷款申请，收集贷款金额、用途和期限等信息。
+    steps:
+      - id: start
+        type: start
+        next: ask_account_number
+
+      - id: ask_account_number
+        type: collect
+        slot_name: account_number
+        response:
+          text: "请提供您的账户号，我来帮您办理贷款申请。"
+        next: ask_loan_amount
+
+      - id: ask_loan_amount
+        type: collect
+        slot_name: loan_amount
+        response:
+          text: "请问您需要申请多少金额的贷款？"
+        next: ask_loan_purpose
+
+      - id: ask_loan_purpose
+        type: collect
+        slot_name: loan_purpose
+        response:
+          text: "请简要说明贷款用途（如：购房、购车、经营周转、消费等）。"
+        next: ask_loan_term
+
+      - id: ask_loan_term
+        type: collect
+        slot_name: loan_term
+        response:
+          text: "请问您希望贷款期限是多久？（如：1年、3年、5年、10年、20年、30年）"
+        next: submit_loan
+
+      - id: submit_loan
+        type: action
+        action: action_submit_loan_application
+        next: show_loan_result
+
+      - id: show_loan_result
+        type: action
+        action: action_response
+        args:
+          text: "您的贷款申请已提交成功！\n申请详情：\n- 贷款金额：{{ slots.loan_amount }}元\n- 贷款用途：{{ slots.loan_purpose }}\n- 贷款期限：{{ slots.loan_term }}\n申请状态：{{ slots.loan_status }}\n我们会在1-3个工作日内完成审核，请保持手机畅通。"
+        next: end
+
+      - id: end
+        type: end
+        next: []
+
+  credit_card_loss:
+    name: 银行卡挂失
+    description: 帮用户办理银行卡挂失手续。
+    steps:
+      - id: start
+        type: start
+        next: ask_card_number
+
+      - id: ask_card_number
+        type: collect
+        slot_name: card_number
+        response:
+          text: "请提供需要挂失的银行卡号。"
+        next: ask_loss_reason
+
+      - id: ask_loss_reason
+        type: collect
+        slot_name: loss_reason
+        response:
+          text: "请简要说明挂失原因（如：卡片丢失、被盗、信息泄露等）。"
+        next: submit_loss
+
+      - id: submit_loss
+        type: action
+        action: action_submit_credit_card_loss
+        next: show_loss_result
+
+      - id: show_loss_result
+        type: action
+        action: action_response
+        args:
+          text: "您的银行卡挂失申请已受理。\n挂失卡号：{{ slots.card_number }}\n挂失原因：{{ slots.loss_reason }}\n处理状态：{{ slots.loss_status }}\n请注意：挂失后该卡将无法使用，如需补办新卡请携带身份证到就近网点办理。"
+        next: end
+
+      - id: end
+        type: end
+        next: []
+
+  complaint_ticket:
+    name: 投诉建议
+    description: 帮用户提交投诉或建议工单。
+    steps:
+      - id: start
+        type: start
+        next: ask_complaint_type
+
+      - id: ask_complaint_type
+        type: collect
+        slot_name: complaint_type
+        response:
+          text: "请选择投诉类型（如：服务态度、业务办理、系统问题、费用争议、其他）。"
+        next: ask_complaint_content
+
+      - id: ask_complaint_content
+        type: collect
+        slot_name: complaint_content
+        response:
+          text: "请详细描述您的投诉或建议内容。"
+        next: create_ticket
+
+      - id: create_ticket
+        type: action
+        action: action_create_complaint_ticket
+        next: show_ticket_result
+
+      - id: show_ticket_result
+        type: action
+        action: action_response
+        args:
+          text: "您的投诉建议已成功提交！\n工单号：{{ slots.ticket_id }}\n投诉类型：{{ slots.complaint_type }}\n处理状态：{{ slots.ticket_status }}\n我们会尽快处理您的反馈，预计1-5个工作日内回复。如有紧急问题，请拨打客服热线400-XXX-XXXX。"
+        next: end
+
+      - id: end
+        type: end
+        next: []
+
+  human_handoff:
+    name: 人工客服
+    description: 将当前对话转交给人工客服处理。
+    steps:
+      - id: start
+        type: start
+        next: respond
+
+      - id: respond
+        type: action
+        action: action_response
+        args:
+          text: "好的，我来为您转接人工客服，请稍等。如等待时间较长，您也可以拨打客服热线400-XXX-XXXX。"
+        next: end
+
+      - id: end
+        type: end
+        next: []

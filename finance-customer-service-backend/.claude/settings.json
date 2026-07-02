@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(xargs grep -l \"chat\\\\|router\\\\|FastAPI\\\\|app\\\\.\")",
+      "Bash(find \"D:\\\\ws\\\\py_ws\\\\20260316\\\\project\\\\04\\\\ecommerce-customer\\\\customer-service-backend\" -name \"*.py\" | head -30)",
+      "Read(//d/ws/py_ws/20260316/project/04/ecommerce-customer/customer-service-backend/**)",
+      "Bash(find \"D:\\\\ws\\\\py_ws\\\\20260316\\\\project\\\\04\\\\ecommerce-customer\\\\customer-service-backend\" -name \"*.py\" -not -path \"*/.venv/*\" | head -30)",
+      "Read(//d/ws/py_ws/20260316/project/04/ecommerce-customer/customer-service-backend/atguigu/api/routers/**)",
+      "Read(//d/ws/py_ws/20260316/project/04/ecommerce-customer/customer-service-backend/atguigu/api/**)",
+      "Bash(mkdir -p \"D:\\\\ws\\\\py_ws\\\\20260316\\\\project\\\\06\\\\finance\\\\finance-customer-service-frontend/src/assets\")",
+      "Bash(npm install *)",
+      "Bash(cd \"D:\\\\ws\\\\py_ws\\\\20260316\\\\project\\\\06\\\\finance\\\\finance-customer-service-frontend\" && ls -la src/)",
+      "Read(//d/ws/py_ws/20260316/project/06/finance/finance-customer-service-frontend/**)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -H \"X-Channel-Code: WEB\" http://localhost:8000/api/v1/customers/c1001/accounts)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://localhost:8000/api/v1/channels)",
+      "Bash(xargs grep -l \"X-Channel\\\\|channel_code\\\\|CHANNEL\")"
+    ],
+    "additionalDirectories": [
+      "D:\\ws\\py_ws\\20260316\\project\\06\\finance\\finance-customer-service-frontend\\src",
+      "D:\\ws\\py_ws\\20260316\\project\\06\\finance\\finance-customer-service-frontend"
+    ]
+  }
+}
