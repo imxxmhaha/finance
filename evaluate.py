@@ -57,12 +57,18 @@ INTENT_TEST_CASES = [
 ]
 
 # 业务流程测试用例
+# 注意：金额需要在产品限制范围内
+# LOAN_MORTGAGE_FACTORY: 50万~1000万
+# LOAN_CONSUMER_STD: 3000~30万 (可用额度5000元)
 BUSINESS_FLOW_CASES = [
     {
         "name": "贷款咨询流程",
         "steps": [
             {"user": "贷款申请", "expect_slot": None, "description": "启动贷款流程"},
             {"user": "ACC0000000001", "expect_slot": "account_number", "description": "提供账户号"},
+            {"user": "100万", "expect_slot": "loan_amount", "description": "提供贷款金额"},
+            {"user": "经营周转", "expect_slot": "loan_purpose", "description": "提供贷款用途"},
+            {"user": "3年", "expect_slot": "loan_term", "description": "提供贷款期限"},
         ]
     },
     {
