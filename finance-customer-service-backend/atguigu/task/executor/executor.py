@@ -46,6 +46,11 @@ class FlowExecutor:
                     # 流程失败时清空槽位，确保用户重新开启流程时需要重新填写信息
                     state.active_task.slots.clear()
                     break
+                # action 成功后才推进步骤
+                current_task = state.current_active_task()
+                flow = flows.get_flow_by_id(current_task.flow_id)
+                step = flow.get_step_by_id(current_task.step_id)
+                self._advance_to_next_step(step, state)
         return messages
 
     def advance_until_action(self, state: DialogueState, flows: FlowsList) -> ActionCall:
@@ -80,7 +85,7 @@ class FlowExecutor:
             return self._run_action_step(step, state)
 
     def _run_action_step(self, step, state) -> ActionCall | None:
-        self._advance_to_next_step(step, state)
+        # 不在此处推进步骤，由外层 run_task 在 action 成功后再推进
         action_call: ActionCall = self._build_action_call(step, state)
         return action_call
 
