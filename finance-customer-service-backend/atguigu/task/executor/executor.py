@@ -42,6 +42,8 @@ class FlowExecutor:
                 action_result: ActionResult = await action_runner.run(action_call, state)
                 state.set_slots(action_result.slot_updates)
                 messages.extend(action_result.messages)
+                if not action_result.is_success:
+                    break
         return messages
 
     def advance_until_action(self, state: DialogueState, flows: FlowsList) -> ActionCall:
