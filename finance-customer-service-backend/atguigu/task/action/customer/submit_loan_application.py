@@ -18,10 +18,10 @@ class SubmitLoanApplicationAction(Action):
 
     async def run(self, state: DialogueState, action_kwargs: dict[str, Any]) -> ActionResult:
         """提交贷款申请（中台接口: POST /api/v1/loan/applications）"""
-        account_number = state.active_task.slots.get("account_number")
-        loan_amount_raw = state.active_task.slots.get("loan_amount")
-        loan_purpose = state.active_task.slots.get("loan_purpose")
-        loan_term_raw = state.active_task.slots.get("loan_term")
+        account_number = action_kwargs.get("account_number")
+        loan_amount_raw = action_kwargs.get("loan_amount")
+        loan_purpose = action_kwargs.get("loan_purpose")
+        loan_term_raw = action_kwargs.get("loan_term")
 
         # 解析金额: "一亿" -> 100000000, "50万" -> 500000
         parsed_amount = await parse_amount(str(loan_amount_raw))

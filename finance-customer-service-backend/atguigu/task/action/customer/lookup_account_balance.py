@@ -11,7 +11,7 @@ class LookUpAccountBalanceAction(Action):
 
     async def run(self, state: DialogueState, action_kwargs: dict[str, Any]) -> ActionResult:
         """查询账户余额（中台接口: GET /api/v1/accounts/{account_no}）"""
-        account_number = state.active_task.slots.get("account_number")
+        account_number = action_kwargs.get("account_number")
 
         try:
             resp = await fetch_account(account_number)

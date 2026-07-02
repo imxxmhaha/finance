@@ -13,8 +13,8 @@ class LookUpTransactionAction(Action):
 
     async def run(self, state: DialogueState, action_kwargs: dict[str, Any]) -> ActionResult:
         """查询交易记录（中台接口: GET /api/v1/accounts/{account_no}/transactions）"""
-        account_number = state.active_task.slots.get("account_number")
-        transaction_period = state.active_task.slots.get("transaction_period", "")
+        account_number = action_kwargs.get("account_number")
+        transaction_period = action_kwargs.get("transaction_period", "")
 
         # 解析时间段: "最近三个月" -> (start_time, end_time)
         start_time, end_time = await parse_period(transaction_period)

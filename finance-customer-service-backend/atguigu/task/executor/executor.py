@@ -46,11 +46,8 @@ class FlowExecutor:
                 state.set_slots(action_result.slot_updates)
                 messages.extend(action_result.messages)
                 if not action_result.is_success:
-                    # 流程失败时：回退 step_id 到失败的 action 步骤，清空该 action 设置的槽位
-                    if self._last_action_step_id is not None:
-                        state.active_task.step_id = self._last_action_step_id
-                    for key in action_result.slot_updates:
-                        state.active_task.slots.pop(key, None)
+                    # 流程失败时：直接清空槽位，清空任务
+                    state.cancel_active_task()
                     break
         return messages
 
@@ -93,17 +90,32 @@ class FlowExecutor:
         return action_call
 
     def _build_action_call(self, step, state) -> ActionCall:
-        """构造 ActionCall，支持字符串引用（如 'context.response'）"""
-        args = self._resolve_args(step.args, state)
-        return ActionCall(action_name=step.action, action_kwargs=args)
+        action_name = step.action
+        args = step.args
+
+        # 解析 args 中的 Jinja2 模板（支持 str / dict / list）
+        resolved = self._resolve_args(args, state)
+
+        # 自定义 action：将 slots 合并到 action_kwargs，便于直接访问
+        if action_name not in ("action_response", "action_listen"):
+            slots = state.active_task.slots if state.active_task else {}
+            if isinstance(resolved, dict):
+                resolved = {**slots, **resolved}
+            else:
+                resolved = {**slots}
+
+        # mode 默认值
+        if isinstance(resolved, dict) and not resolved.get("mode"):
+            resolved["mode"] = "static"
+
+        return ActionCall(action_name=action_name, action_kwargs=resolved)
+
 
     def _resolve_args(self, args, state) -> Any:
         """
         解析 args，统一使用 Jinja2 模板解析
+        支持 str / dict / list 三种类型的递归解析
         """
-        if not isinstance(args, str):
-            return args
-
         # 构建模板上下文
         current_task = state.current_active_task()
         template_context = {
@@ -111,19 +123,32 @@ class FlowExecutor:
             "slots": state.active_task.slots if state.active_task else {},
         }
 
-        original_args = args
+        return self._render_value(args, template_context)
+
+    def _render_value(self, value: Any, context: dict) -> Any:
+        """递归解析 Jinja2 模板"""
+        if isinstance(value, str):
+            return self._render_string(value, context)
+        if isinstance(value, dict):
+            return {k: self._render_value(v, context) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._render_value(item, context) for item in value]
+        return value
+
+    def _render_string(self, text: str, context: dict) -> Any:
+        """解析字符串中的 Jinja2 模板"""
+        original = text
 
         # 如果不包含 Jinja2 语法，自动补全 {{ }}
-        if '{{' not in args and '{%' not in args:
-            args = f"{{{{ {args} }}}}"
+        if '{{' not in text and '{%' not in text:
+            text = f"{{{{ {text} }}}}"
 
-        # 统一使用 Jinja2 解析
         try:
-            template = Template(args)
-            rendered = template.render(template_context).strip()
+            template = Template(text)
+            rendered = template.render(context).strip()
 
             if not rendered:
-                if '.' in original_args and not any(op in original_args for op in ['{{', '{%', ' ']):
+                if '.' in original and not any(op in original for op in ['{{', '{%', ' ']):
                     return {}
                 return rendered
 

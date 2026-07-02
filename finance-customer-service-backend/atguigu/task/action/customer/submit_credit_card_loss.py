@@ -11,8 +11,8 @@ class SubmitCreditCardLossAction(Action):
 
     async def run(self, state: DialogueState, action_kwargs: dict[str, Any]) -> ActionResult:
         """提交银行卡挂失（中台接口: POST /api/v1/accounts/{account_no}/status-changes）"""
-        card_number = state.active_task.slots.get("card_number")
-        loss_reason = state.active_task.slots.get("loss_reason")
+        card_number = action_kwargs.get("card_number")
+        loss_reason = action_kwargs.get("loss_reason")
 
         try:
             resp = await change_account_status(

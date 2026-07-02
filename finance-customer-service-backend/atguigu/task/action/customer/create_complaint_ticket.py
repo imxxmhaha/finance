@@ -11,8 +11,8 @@ class CreateComplaintTicketAction(Action):
 
     async def run(self, state: DialogueState, action_kwargs: dict[str, Any]) -> ActionResult:
         """创建投诉工单（中台接口: POST /api/v1/support/tickets）"""
-        complaint_type = state.active_task.slots.get("complaint_type")
-        complaint_content = state.active_task.slots.get("complaint_content")
+        complaint_type = action_kwargs.get("complaint_type")
+        complaint_content = action_kwargs.get("complaint_content")
 
         # 将中文投诉类型映射为中台 ticket_type
         type_map = {
