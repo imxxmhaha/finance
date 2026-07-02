@@ -374,9 +374,11 @@ function getObjectTitle(message) {
   if (payload.title) {
     return payload.title
   }
-  if (message.objectType === 'account') return '账户对象'
-  if (message.objectType === 'wealth_product') return '理财产品'
-  if (message.objectType === 'loan_product') return '贷款产品'
+  if (message.objectType === 'account') {
+    return payload.account_product?.product_name || payload.account_name || '银行账户'
+  }
+  if (message.objectType === 'wealth_product') return payload.product_name || '理财产品'
+  if (message.objectType === 'loan_product') return payload.product_code || '贷款产品'
   return '业务对象'
 }
 

@@ -44,13 +44,15 @@ class SubmitLoanApplicationAction(Action):
         logger.info(f"贷款申请 期限解析: '{loan_term_raw}' -> {apply_term_months}个月")
 
         try:
-            # ---- 0. 通过账户号反查客户号 ----
-            customer_no = await fetch_customer_no_by_account(account_number)
+            # ---- 0. 通过账户号反查客户号（优先使用 slots 中已缓存的值）----
+            customer_no = action_kwargs.get("customer_no")
             if not customer_no:
-                return ActionResult(
-                    messages=[BotMessage(text=f"抱歉，无法识别账户号「{account_number}」，请确认账户号是否正确。")],
-                    is_success=False,
-                )
+                customer_no = await fetch_customer_no_by_account(account_number)
+                if not customer_no:
+                    return ActionResult(
+                        messages=[BotMessage(text=f"抱歉，无法识别账户号「{account_number}」，请确认账户号是否正确。")],
+                        is_success=False,
+                    )
             logger.info(f"贷款申请 账户号={account_number} -> 客户号={customer_no}")
 
             # ---- 1. 查询客户授信额度 ----
@@ -71,7 +73,7 @@ class SubmitLoanApplicationAction(Action):
             credit = credit_list[0]
             limit_no = credit.get("limit_no")
             available = float(credit.get("available_limit_amount", 0))
-            product_code = credit.get("product_code")
+            product_code = action_kwargs.get("product_code") or credit.get("product_code")
 
             # ---- 2. 额度不足时友好提示 ----
             if parsed_amount > available:

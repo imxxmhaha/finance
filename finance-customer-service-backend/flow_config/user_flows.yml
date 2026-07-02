@@ -206,7 +206,7 @@ flows:
         type: collect
         slot_name: loan_term
         response:
-          text: "请问您希望贷款期限是多久？（如：1年、3年、5年、10年、20年、30年）"
+          text: "请问您希望贷款期限是多久？（如：1个月、3个月、6个月、1年、2年、3年、5年、10年）"
         next: submit_loan
 
       - id: submit_loan
