@@ -517,8 +517,9 @@ def generate_charts(report: EvaluationReport, output_dir: str = "evaluation_repo
 
         # 添加通过/失败标签
         for i, (bar, result) in enumerate(zip(bars, test_results)):
-            label = "✅" if result else "❌"
-            ax.text(1.05, i, label, ha='left', va='center', fontsize=10)
+            label = "PASS" if result else "FAIL"
+            color = '#2ecc71' if result else '#e74c3c'
+            ax.text(1.05, i, label, ha='left', va='center', fontsize=9, color=color, fontweight='bold')
 
     plt.tight_layout()
     detail_path = os.path.join(output_dir, 'detailed_results.png')
