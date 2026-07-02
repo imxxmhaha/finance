@@ -14,4 +14,4 @@ RUN uv sync --no-dev --no-install-project
 COPY . .
 
 EXPOSE 7000
-CMD ["uv", "run", "python", "main.py"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7000"]
