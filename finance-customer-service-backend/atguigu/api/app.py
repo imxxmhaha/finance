@@ -12,7 +12,7 @@ from atguigu.api.routers.knowledge_router import router as knowledge_router
 
 def create_app() -> FastAPI:
     """
-    负责创建fastapi实例
+    负责创建fastapi实例  test
     """
     # 1. 实例化FastAPI实例，注册生命周期管理器
     app = FastAPI(
